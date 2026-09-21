@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from db import get_jobs, init_db, insert_jobs
+from db import get_jobs, init_db, insert_jobs, list_jobs
 from linkedin import LinkedInJob
 from score_engine import Profile, score, score_job
 
@@ -85,6 +85,16 @@ class DbTests(unittest.TestCase):
             rows = get_jobs(["b", "missing", "a"], path)
         self.assertEqual([row["id"] for row in rows], ["b", "a"])
         self.assertEqual(rows[0]["company"], "Beta")
+
+    def test_list_jobs_returns_all_rows(self) -> None:
+        profile = Profile.load()
+        first = score_job(_job(id="a"), profile)
+        second = score_job(_job(id="b", company="Beta"), profile)
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "jobs.db"
+            insert_jobs([first, second], path)
+            rows = list_jobs(path)
+        self.assertEqual({row["id"] for row in rows}, {"a", "b"})
 
 
 if __name__ == "__main__":

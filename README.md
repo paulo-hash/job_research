@@ -101,6 +101,8 @@ Donne un ou plusieurs job ids, par exemple : « CV et lettre pour 1234567890 ».
 
 Le skill **build-profile** régénère `data/profile.md` à partir de `data/experience.txt` (format `data/profile_demo.md`), sans inventer et sans lire `profile.yaml`.
 
+Le skill **cv-gaps** compare `data/experience.txt` aux offres de `data/jobs.db` et écrit `data/gaps.md` (skills absents, quoi apprendre, idées de projets perso). Il n’invente pas un outil qui n’apparaît pas dans les descriptions.
+
 ## Tests
 
 ```bash

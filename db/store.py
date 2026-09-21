@@ -95,3 +95,14 @@ def get_jobs(ids: list[str], path: Path | None = None) -> list[dict[str, object]
         rows = connection.execute(query, ids).fetchall()
     by_id = {str(row["id"]): dict(row) for row in rows}
     return [by_id[job_id] for job_id in ids if job_id in by_id]
+
+
+def list_jobs(path: Path | None = None) -> list[dict[str, object]]:
+    db_path = path or DB_PATH
+    if not db_path.exists():
+        return []
+    query = f"SELECT {', '.join(JOB_COLUMNS)} FROM jobs ORDER BY score DESC, company, title"
+    with sqlite3.connect(db_path) as connection:
+        connection.row_factory = sqlite3.Row
+        rows = connection.execute(query).fetchall()
+    return [dict(row) for row in rows]
