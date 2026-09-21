@@ -1,0 +1,13 @@
+seniority: senior          # junior | mid | senior | staff
+years: 4
+skills:
+  - python
+  - typescript
+  - sql
+  - distributed systems
+titles:
+  - software engineer
+  - backend engineer
+domains:
+  - fintech
+  - infrastructure

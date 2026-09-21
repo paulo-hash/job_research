@@ -6,24 +6,33 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from pathlib import Path
 
-from linkedin import search_linkedin
+from dataclasses import asdict
+import sys
+
+from db import init_db, insert_jobs
+from linkedin import LinkedInJob, search_linkedin
+from score_engine import Profile, ScoredMatch, score as score_jobs
 
 
-def print_matches(matches: list[dict]) -> None:
+def print_matches(matches: list[LinkedInJob]) -> None:
     if not matches:
         print("Aucun job NYC d'ingénierie ne mentionne un sponsoring de visa.")
         return
     for item in matches:
-        print(f"[{item['company']}] {item['title']}")
-        print(f"  Lieu: {item['location']}")
-        if item.get("posted"):
-            print(f"  Publié: {item['posted']}")
-        if item["visa_snippet"]:
-            print(f"  Visa ({item['visa']}): {item['visa_snippet']}")
+        print(f"[{item.company}] {item.title}")
+        print(f"  Lieu: {item.location}")
+        if isinstance(item, ScoredMatch):
+            skills = ", ".join(item.matched_skills) or "—"
+            print(f"  Score: {item.score}/100 · skills: {skills}")
+        if item.posted:
+            print(f"  Publié: {item.posted}")
+        if item.visa_snippet:
+            print(f"  Visa ({item.visa}): {item.visa_snippet}")
         else:
-            print(f"  Visa: {item['visa']}")
-        print(f"  {item['url']}")
+            print(f"  Visa: {item.visa}")
+        print(f"  {item.url}")
         print()
 
 
@@ -58,11 +67,19 @@ def parse_args() -> argparse.Namespace:
         help="sponsors: mention positive (défaut). none: refus. all: tous les jobs NYC d'ingénierie",
     )
     parser.add_argument("--refresh", action="store_true", help="Ignore le cache local")
+    parser.add_argument(
+        "--profile",
+        type=Path,
+        default=Path(__file__).with_name("data") / "profile.yaml",
+        help="Fichier profil YAML (défaut: data/profile.yaml)",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    init_db()
+    profile = Profile.load(args.profile)
     keywords = None
     if args.keywords:
         keywords = [item.strip() for item in args.keywords.split(",") if item.strip()]
@@ -74,9 +91,11 @@ def main() -> int:
         posted=args.posted,
         refresh=args.refresh,
     )
+    matches = score_jobs(matches, profile)
+    inserted = insert_jobs(matches)
 
     if args.json:
-        json.dump(matches, sys.stdout, indent=2, ensure_ascii=False)
+        json.dump([asdict(item) for item in matches], sys.stdout, indent=2, ensure_ascii=False)
         print()
     else:
         print_matches(matches)
@@ -85,7 +104,8 @@ def main() -> int:
         f"{len(matches)} résultat(s) · "
         f"{stats['jobs']} offres · "
         f"{stats['details']} descriptions · "
-        f"{stats['errors']} erreurs",
+        f"{stats['errors']} erreurs · "
+        f"{inserted} nouvelle(s) ligne(s)",
         file=sys.stderr,
     )
     return 0

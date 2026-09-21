@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
 import sys
 import threading
@@ -219,13 +220,26 @@ def collect_listings(
     return listings
 
 
+@dataclass(frozen=True)
+class LinkedInJob:
+    id: str
+    company: str
+    title: str
+    location: str
+    url: str
+    posted: str
+    visa: str
+    visa_snippet: str | None
+    description: str
+
+
 def search_linkedin(
     visa_filter: str,
     pages: int = 8,
     keywords: list[str] | None = None,
     posted: str = "24h",
     refresh: bool = False,
-) -> tuple[list[dict], dict[str, int]]:
+) -> tuple[list[LinkedInJob], dict[str, int]]:
     keywords = keywords or DEFAULT_KEYWORDS
     listings = collect_listings(keywords, pages=pages, posted=posted, refresh=refresh)
     stats = {"jobs": len(listings), "details": 0, "errors": 0}
@@ -247,7 +261,7 @@ def search_linkedin(
             stats["errors"] += 1
             print(f"! description {job['id']} ignorée: {exc}", file=sys.stderr)
 
-    matches: list[dict] = []
+    matches: list[LinkedInJob] = []
     for job in candidates:
         description = descriptions.get(job["id"])
         if description is None:
@@ -257,18 +271,19 @@ def search_linkedin(
             continue
         if visa_filter == "none" and status != "no":
             continue
-        location = job.get("location") or ""
         matches.append(
-            {
-                "company": job.get("company") or "",
-                "title": job.get("title") or "",
-                "location": location,
-                "url": job.get("url"),
-                "posted": job.get("posted"),
-                "visa": status,
-                "visa_snippet": snippet,
-            }
+            LinkedInJob(
+                id=job["id"],
+                company=job.get("company") or "",
+                title=job.get("title") or "",
+                location=job.get("location") or "",
+                url=job.get("url") or "",
+                posted=job.get("posted") or "",
+                visa=status,
+                visa_snippet=snippet,
+                description=description,
+            )
         )
 
-    matches.sort(key=lambda item: (item["company"].casefold(), item["title"].casefold()))
+    matches.sort(key=lambda item: (item.company.casefold(), item.title.casefold()))
     return matches, stats
