@@ -29,6 +29,7 @@ Par défaut : **dernières 24 h**, jobs NYC d’ingénierie avec une **mention p
 python main.py --posted 24h                       # défaut
 python main.py --posted week
 python main.py --posted any                       # sans filtre de date
+python main.py --visa sponsors                    # défaut : seulement une mention positive
 python main.py --visa all                         # tous les jobs NYC d’ingénierie
 python main.py --visa none                        # refus explicite de sponsoring
 python main.py --pages 12                         # pages par mot-clé (10 offres/page)
@@ -59,7 +60,7 @@ Les mots sont matchés tels quels (pas de synonymes). Un job iOS sans Python/SQL
 | --- | --- |
 | Lieu | New York City, NYC, Brooklyn, Manhattan, Queens, Bronx, Staten Island, Long Island City, `New York, NY`. Pas Jersey City ni les autres villes de l’État. |
 | Titre | software / data / ML / backend / frontend / fullstack / platform / SRE / research engineer, etc. Exclut sales engineer, recruiting, customer success. |
-| Visa `sponsors` | La description dit qu’ils sponsorisent (H-1B, visa sponsorship, we will sponsor…). |
+| Visa `sponsors` | Défaut. La description dit qu’ils sponsorisent (H-1B, visa sponsorship, we will sponsor…). |
 | Visa `none` | La description dit qu’ils ne sponsorisent pas. |
 | Visa `all` | Tous les jobs NYC d’ingénierie, avec le statut `sponsors` / `no` / `unmentioned`. |
 | Date `24h` | Offres des dernières 24 h (défaut, `f_TPR=r86400`). `week` / `month` / `any` aussi. |
@@ -82,9 +83,23 @@ Ctrl+C arrête un run trop long. Réduire `--pages` ou `--keywords` diminue auss
 Les offres scorées vont dans `data/jobs.db` (`JOBS_DB` pour changer le chemin). `id` (LinkedIn job id) est **PRIMARY KEY** : un `INSERT OR IGNORE` n’ajoute la ligne que si l’id n’existe pas encore. Le fichier n’est **pas** versionné.
 
 ```bash
-python main.py --visa all --pages 2 --keywords "software engineer,backend engineer"
-sqlite3 data/jobs.db "SELECT score, company, title, matched_skills FROM jobs ORDER BY score DESC;"
+python main.py
+sqlite3 data/jobs.db "SELECT score, company, title, visa, matched_skills FROM jobs ORDER BY score DESC;"
 ```
+
+## Candidatures (CV + lettre)
+
+Remplis `data/experience.txt` avec des faits réels. Le skill **job-application** lit l’offre dans `data/jobs.db` et écrit un CV au format `data/resume_example.docx` (squelette `data/cv_demo.md`) plus une lettre, **sans inventer**.
+
+```
+data/applications/<job_id>/cv.md
+data/applications/<job_id>/cv.docx
+data/applications/<job_id>/cover_letter.md
+```
+
+Donne un ou plusieurs job ids, par exemple : « CV et lettre pour 1234567890 ».
+
+Le skill **build-profile** régénère `data/profile.md` à partir de `data/experience.txt` (format `data/profile_demo.md`), sans inventer et sans lire `profile.yaml`.
 
 ## Tests
 

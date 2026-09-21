@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from db import init_db, insert_jobs
+from db import get_jobs, init_db, insert_jobs
 from linkedin import LinkedInJob
 from score_engine import Profile, score, score_job
 
@@ -74,6 +74,17 @@ class DbTests(unittest.TestCase):
             with sqlite3.connect(path) as connection:
                 count = connection.execute("SELECT COUNT(*) FROM jobs").fetchone()[0]
             self.assertEqual(count, 1)
+
+    def test_get_jobs_preserves_id_order(self) -> None:
+        profile = Profile.load()
+        first = score_job(_job(id="a"), profile)
+        second = score_job(_job(id="b", company="Beta"), profile)
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "jobs.db"
+            insert_jobs([first, second], path)
+            rows = get_jobs(["b", "missing", "a"], path)
+        self.assertEqual([row["id"] for row in rows], ["b", "a"])
+        self.assertEqual(rows[0]["company"], "Beta")
 
 
 if __name__ == "__main__":
